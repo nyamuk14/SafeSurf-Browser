@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; media-src 'self' blob:; object-src 'none'">
+  <title>SafeSurf Browser</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200">
+  <style>
+    .material-symbols-rounded {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 20px;
+    }
+
+    /* Hide any download buttons that might be injected by Electron */
+    ::-webkit-download-button,
+    .download-icon:not(#downloads-button *) {
+      display: none !important;
+    }
+
+    /* History Styles */
+    .history-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    #history-search {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .history-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-item:hover {
+      background: #f5f5f5;
+    }
+
+    .history-item img {
+      width: 16px;
+      height: 16px;
+      margin-right: 10px;
+    }
+
+    .history-item .title {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .history-item .url {
+      color: #666;
+      font-size: 0.9em;
+      margin-left: 10px;
+    }
+
+    .history-item .time {
+      color: #999;
+      font-size: 0.8em;
+      margin-left: 10px;
+      white-space: nowrap;
+    }
+
+    /* Settings Panel Styles */
+    #settings-panel {
+      width: 80%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .settings-group {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .settings-group h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #1a73e8;
+    }
+
+    .history-section {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .history-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      align-items: center;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    #history-search {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .history-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      transition: background-color 0.2s;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-item:hover {
+      background-color: #f8f9fa;
+      cursor: pointer;
+    }
+
+    .history-item .favicon {
+      width: 16px;
+      height: 16px;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .history-item .content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .history-item .title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a73e8;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item .url {
+      font-size: 12px;
+      color: #5f6368;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item .time {
+      font-size: 12px;
+      color: #80868b;
+      margin-left: 12px;
+      white-space: nowrap;
+    }
+
+    .danger-button {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .danger-button:hover {
+      background-color: #c82333;
+    }
+
+    #clear-timeframe {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: white;
+    }
+
+    /* Custom scrollbar for history list */
+    .history-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .history-list::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    .history-list::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+
+    .history-list::-webkit-scrollbar-thumb:hover {
+      background: #a1a1a1;
+    }
+
+    /* Download panel styles */
+    #download-panel {
+      position: absolute;
+      top: 60px;
+      right: 10px;
+      width: 350px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+      max-height: 70vh;
+    }
+
+    .download-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f1f1f1;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .download-panel-header h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: #202124;
+    }
+
+    .download-panel-close {
+      background: none;
+      border: none;
+      color: #5f6368;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .download-panel-close:hover {
+      color: #202124;
+    }
+
+    .download-panel-body {
+      padding: 0;
+      overflow-y: auto;
+      max-height: calc(70vh - 100px);
+    }
+
+    .download-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .download-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+    }
+
+    .download-icon {
+      margin-right: 12px;
+      color: #5f6368;
+      font-size: 24px;
+    }
+
+    .download-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .download-filename {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .download-status {
+      font-size: 12px;
+      color: #5f6368;
+    }
+
+    .download-details {
+      font-size: 11px;
+      color: #80868b;
+      margin-top: 2px;
+    }
+
+    .download-progress {
+      height: 3px;
+      background: #e0e0e0;
+      margin-top: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .download-progress-bar {
+      height: 100%;
+      background: #1a73e8;
+      width: 0;
+      transition: width 0.3s ease;
+    }
+
+    .download-progress-bar.scanning {
+      background: #f9a825;
+      animation: pulse 1.5s infinite;
+    }
+
+    .download-progress-bar.unsafe {
+      background: #d32f2f;
+    }
+
+    .download-actions {
+      display: flex;
+      gap: 8px;
+      margin-left: 8px;
+    }
+
+    .download-action {
+      background: none;
+      border: none;
+      color: #5f6368;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .download-action:hover {
+      background: #f1f1f1;
+      color: #1a73e8;
+    }
+
+    .download-panel-footer {
+      padding: 8px 16px;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .view-all-downloads {
+      font-size: 13px;
+      color: #1a73e8;
+      text-decoration: none;
+      padding: 8px;
+      border-radius: 4px;
+    }
+
+    .view-all-downloads:hover {
+      background: rgba(26, 115, 232, 0.08);
+    }
+
+    .clear-all-downloads {
+      font-size: 13px;
+      color: #5f6368;
+      background: none;
+      border: none;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .clear-all-downloads:hover {
+      background: #f1f1f1;
+    }
+
+    .empty-downloads {
+      padding: 24px 16px;
+      text-align: center;
+      color: #5f6368;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
+
+    .primary-button:hover {
+      background-color: #4285f4;
+    }
+    
+    .secondary-button {
+      padding: 6px 12px;
+      background-color: #f1f3f4;
+      color: #5f6368;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s;
+    }
+    
+    .secondary-button:hover {
+      background-color: #e0e0e0;
+    }
+    
+    .toggle {
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <header id="browser-toolbar">
+    <div class="navigation-buttons">
+      <button id="back-button" title="Go back">
+        <span class="material-symbols-rounded">arrow_back</span>
+      </button>
+      <button id="forward-button" title="Go forward">
+        <span class="material-symbols-rounded">arrow_forward</span>
+      </button>
+      <button id="refresh-button" title="Refresh">
+        <span class="material-symbols-rounded">refresh</span>
+      </button>
+      <button id="home-button" title="Home">
+        <span class="material-symbols-rounded">home</span>
+      </button>
+    </div>
+    
+    <div class="address-bar">
+      <div id="security-indicator" class="secure">
+        <span class="material-symbols-rounded">lock</span>
+      </div>
+      <input type="text" id="url-input" placeholder="Enter URL or search...">
+      <button id="go-button">
+        <span class="material-symbols-rounded">arrow_forward</span>
+      </button>
+    </div>
+    <div class="browser-actions">
+      <button id="downloads-button" title="Downloads">
+        <span class="material-symbols-rounded">download</span>
+      </button>
+      <button id="settings-button" title="Settings">
+        <span class="material-symbols-rounded">settings</span>
+      </button>
+    </div>
+  </header>
+
+  <div id="security-alert" class="hidden">
+    <span id="alert-message"></span>
+    <button id="dismiss-alert">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+  </div>
+
+  <main>
+    <div id="browser-container">
+      <webview 
+        id="webview" 
+        allowpopups="true"
+        disablewebsecurity="false"
+        src="https://www.google.com"
+        webpreferences="contextIsolation=true, plugins=true, javascript=true, sandbox=true"
+        plugins
+        enableplugins="true"
+        enableremotemodule="false"
+        partition="persist:main"
+        useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      ></webview>
+    </div>
+  </main>
+
+  <!-- Download Panel (Google Chrome Style) -->
+  <div id="download-panel" style="display: none;">
+    <div class="download-panel-header">
+      <h3>Recent download history</h3>
+      <button class="download-panel-close" id="close-download-panel">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+    <div class="download-panel-body">
+      <ul class="download-list" id="download-items-list">
+        <!-- Download items will be added here dynamically -->
+      </ul>
+      <div class="empty-downloads" id="empty-downloads" style="display: none;">
+        <p>No downloads</p>
+      </div>
+    </div>
+    <div class="download-panel-footer">
+      <button class="clear-all-downloads" id="clear-all-downloads">
+        Clear all
+      </button>
+    </div>
+  </div>
+
+  <div id="settings-panel" class="hidden">
+    <div class="settings-header">
+      <h2>SafeSurf Settings</h2>
+      <button id="close-settings" class="icon-button">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+    
+    <div class="settings-content">
+      <div class="settings-section">
+        <div class="section-header">
+          <span class="section-icon material-symbols-rounded">shield</span>
+          <h3>Security</h3>
+        </div>
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-title">Phishing Protection</div>
+            <div class="setting-description">Block access to malicious websites and show security warnings</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="phishing-protection" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-title">Download Scanning</div>
+            <div class="setting-description">Check downloaded files for malware before saving</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="download-scanning" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="section-header">
+          <span class="section-icon material-symbols-rounded">history</span>
+          <h3>Browsing History</h3>
+        </div>
+        <div class="history-container">
+          <div id="history-list" class="history-list">
+            <!-- History items will be inserted here via JavaScript -->
+          </div>
+          <div class="history-actions">
+            <button id="clear-history">
+              <span class="material-symbols-rounded">delete_forever</span>
+              Clear Browsing History
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="settings-footer">
+      <button id="save-settings" class="primary-button">Save Changes</button>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html> 

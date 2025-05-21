@@ -1,0 +1,75 @@
+{
+  "name": "safesurf-browser",
+  "version": "1.0.0",
+  "description": "A secure browser with phishing detection, download security, and HTTPS enforcement",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "set NODE_ENV=production && electron-builder",
+    "pack": "set NODE_ENV=production && electron-builder --dir"
+  },
+  "keywords": [
+    "security",
+    "browser",
+    "phishing",
+    "electron"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^26.0.12",
+    "eslint-plugin-electron": "^7.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "dotenv": "^16.5.0",
+    "electron-store": "^8.2.0",
+    "lowdb": "^1.0.0"
+  },
+  "build": {
+    "appId": "com.safesurf.browser",
+    "productName": "SafeSurf Browser",
+    "files": [
+      "**/*",
+      "!node_modules/.bin",
+      "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/*.{o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!config.js.example",
+      "!SECURITY.md",
+      ".env",
+      "!.gitattributes",
+      "!.gitignore",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.idea,.vscode,__pycache__,thumbs.db,.flowconfig,.jshintrc,.eslintrc,.circleci,.nyc_output,.travis.yml,appveyor.yml,.flowconfig}",
+      "!**/node_modules",
+      "package.json",
+      "main.js",
+      "index.html",
+      "preload.js",
+      "renderer.js",
+      "styles.css",
+      "config.js",
+      "assets/**/*",
+      "security/**/*",
+      "data/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets"
+    }
+  }
+}
