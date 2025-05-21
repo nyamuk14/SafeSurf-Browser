@@ -1,5 +1,9 @@
 # SafeSurf Browser
 
+> ⚠️ **Project Status:** This project is still under active development and maintenance.
+
+---
+
 **SafeSurf** is a secure desktop web browser built using Electron, designed to protect users from phishing threats, unsafe downloads, and insecure HTTP connections.
 
 ## Features
