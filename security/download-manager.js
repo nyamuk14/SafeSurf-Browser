@@ -17,6 +17,8 @@ class DownloadManager {
     this.isDownloadPanelVisible = false;
     this.securityScanEnabled = true; // Always enable security scanning
     this.activeDownloadUrls = new Set(); // Track active download URLs to prevent duplicates
+    this.blockedDownloads = new Set(); // Track blocked downloads by URL+filename
+    this.blockedDownloadMap = new Map(); // Map downloadKey to downloadId for blocked entries
   }
 
   initialize(parentWindow) {
@@ -222,14 +224,56 @@ class DownloadManager {
     const fileName = this._sanitizeFilename(originalFilename);
     const url = item.getURL();
     
-    // Check if this URL is already being downloaded to prevent duplicates
+    // Unique key for this download
     const downloadKey = `${url}_${fileName}`;
-    if (this.activeDownloadUrls.has(downloadKey)) {
-      console.log(`[Download] Skipping duplicate download: ${fileName} from ${url}`);
+    
+    // If this download was previously blocked, block it instantly
+    if (this.blockedDownloads.has(downloadKey)) {
+      // If already in downloads list, do not add again
+      if (this.blockedDownloadMap.has(downloadKey)) {
+        this.parentWindow.webContents.send('security-alert', {
+          message: `Download Blocked: This file was previously blocked as malicious.`,
+          type: 'error'
+        });
+        item.cancel();
+        return;
+      }
+      // Otherwise, add to downloads and map as before
+      console.warn(`[Security] Instantly blocking previously blocked malicious download: ${fileName} from ${url}`);
+      const blockedDownload = {
+        id,
+        fileName,
+        url,
+        state: 'blocked',
+        receivedBytes: 0,
+        totalBytes: 0,
+        startTime: Date.now(),
+        endTime: Date.now(),
+        securityInfo: 'This file was previously blocked as malicious.'
+      };
+      this.downloads.set(id, blockedDownload);
+      this.blockedDownloadMap.set(downloadKey, id);
+      this.parentWindow.webContents.send('download-started', blockedDownload);
+      if (!this.isDownloadPanelVisible) {
+        this.isDownloadPanelVisible = true;
+        this.parentWindow.webContents.send('toggle-download-panel', {
+          isVisible: true,
+          downloads: this.getDownloads()
+        });
+      }
+      this.parentWindow.webContents.send('security-alert', {
+        message: `Download Blocked: This file was previously blocked as malicious.`,
+        type: 'error'
+      });
+      item.cancel();
       return;
     }
-    
-    // Add to active downloads set to prevent duplicates
+    // Only skip if the download is currently in progress
+    if (this.activeDownloadUrls.has(downloadKey)) {
+      console.log(`[Download] Skipping duplicate download in progress: ${fileName} from ${url}`);
+      return;
+    }
+    // Add to active downloads set to prevent duplicates in progress
     this.activeDownloadUrls.add(downloadKey);
     
     // If download scanning is disabled, proceed directly without security checks
@@ -321,41 +365,41 @@ class DownloadManager {
         // Block the download if it's not safe
         console.warn(`[Security] 🛑 BLOCKING MALICIOUS DOWNLOAD: ${fileName} from ${url}`);
         console.warn(`[Security] Reason: ${scanResult.message}`);
-        
-        // Create a blocked download entry
-        const blockedDownload = {
-          id,
-          fileName,
-          url,
-          state: 'blocked',
-          receivedBytes: 0,
-          totalBytes: 0,
-          startTime: Date.now(),
-          endTime: Date.now(),
-          securityInfo: scanResult.message
-        };
-        
-        // Add to downloads map
-        this.downloads.set(id, blockedDownload);
-        
-        // Send to renderer
-        this.parentWindow.webContents.send('download-started', blockedDownload);
-        
-        // Show download panel with warning
-        if (!this.isDownloadPanelVisible) {
-          this.isDownloadPanelVisible = true;
-          this.parentWindow.webContents.send('toggle-download-panel', {
-            isVisible: true,
-            downloads: this.getDownloads()
-          });
+        // Add to blockedDownloads set
+        this.blockedDownloads.add(downloadKey);
+        // Add to blockedDownloadMap if not already present
+        if (!this.blockedDownloadMap.has(downloadKey)) {
+          this.blockedDownloadMap.set(downloadKey, id);
+          // Create a blocked download entry
+          const blockedDownload = {
+            id,
+            fileName,
+            url,
+            state: 'blocked',
+            receivedBytes: 0,
+            totalBytes: 0,
+            startTime: Date.now(),
+            endTime: Date.now(),
+            securityInfo: scanResult.message
+          };
+          // Add to downloads map
+          this.downloads.set(id, blockedDownload);
+          // Send to renderer
+          this.parentWindow.webContents.send('download-started', blockedDownload);
+          // Show download panel with warning
+          if (!this.isDownloadPanelVisible) {
+            this.isDownloadPanelVisible = true;
+            this.parentWindow.webContents.send('toggle-download-panel', {
+              isVisible: true,
+              downloads: this.getDownloads()
+            });
+          }
         }
-        
         // Show security alert
         this.parentWindow.webContents.send('security-alert', {
           message: `Download Blocked: ${scanResult.message}`,
           type: 'error'
         });
-        
         // Cancel the download
         item.cancel();
         return;
@@ -541,6 +585,9 @@ class DownloadManager {
     
     // Clear the downloads map
     this.downloads.clear();
+    
+    // Clear the blockedDownloadMap
+    this.blockedDownloadMap.clear();
     
     // Notify the main window
     this.parentWindow.webContents.send('downloads-cleared');

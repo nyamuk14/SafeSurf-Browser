@@ -518,10 +518,11 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error loading history:', error);
       const historyList = document.getElementById('history-list');
       historyList.innerHTML = `
-      <div class="empty-history">
-        <p>Could not load history</p>
-        <span>${error.message || 'Unknown error'}</span>
-      </div>`;
+        <div class="empty-history">
+          <p>Could not load history</p>
+          <span id="history-error-message"></span>
+        </div>`;
+      document.getElementById('history-error-message').textContent = error.message || 'Unknown error';
     }
   }
 
@@ -968,6 +969,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(error => {
       console.error('Error fetching downloads:', error);
     });
+  }).catch(error => {
+    console.error('Error during renderer initialization:', error);
   });
 
   // Add detection for link clicks to check URLs through phishing detection
@@ -1023,5 +1026,20 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Test download triggered via keyboard shortcut (Alt+D)');
       window.electronAPI.testDownload();
     }
+  });
+
+  window.electronAPI.onHttpBlocked(({ url }) => {
+    showSecurityAlert(
+      `This site is not secure (HTTP). <button id="continue-anyway">Continue Anyway</button>`,
+      'error'
+    );
+    setTimeout(() => {
+      const btn = document.getElementById('continue-anyway');
+      if (btn) {
+        btn.onclick = () => {
+          window.electronAPI.allowHttpUrl(url);
+        };
+      }
+    }, 0);
   });
 }); 

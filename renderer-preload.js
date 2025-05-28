@@ -1,6 +1,9 @@
 // This script runs in the context of the webview
 // It can monitor the webview's content for potential security issues
 
+// Set a trusted origin for postMessage
+const trustedOrigin = window.location.origin;
+
 // Function to detect potential phishing attempts in the page
 function detectPhishingIndicators() {
   // Check for password fields on non-HTTPS pages
@@ -12,7 +15,7 @@ function detectPhishingIndicators() {
     window.postMessage({
       type: 'security-warning',
       message: 'Password field detected on non-HTTPS page'
-    }, '*');
+    }, trustedOrigin);
   }
   
   // Check for deceptive login forms
@@ -25,7 +28,7 @@ function detectPhishingIndicators() {
         window.postMessage({
           type: 'security-warning',
           message: 'Login form submits to non-secure destination'
-        }, '*');
+        }, trustedOrigin);
       }
     }
   });
@@ -49,8 +52,9 @@ function interceptLinkClicks() {
     // Skip internal page links
     if (href.startsWith('#')) return;
     
-    // Skip javascript: links
-    if (href.startsWith('javascript:')) return;
+    // Block dangerous schemes: javascript:, data:, vbscript:
+    const dangerousSchemes = ['javascript:', 'data:', 'vbscript:'];
+    if (dangerousSchemes.some(scheme => href.toLowerCase().startsWith(scheme))) return;
     
     // Skip mailto: links
     if (href.startsWith('mailto:')) return;
@@ -65,7 +69,7 @@ function interceptLinkClicks() {
     window.postMessage({
       type: 'navigate',
       url: url
-    }, '*');
+    }, trustedOrigin);
   });
 }
 
@@ -90,7 +94,7 @@ window.addEventListener('DOMContentLoaded', () => {
     url: window.location.href,
     title: document.title,
     isSecure: window.location.protocol === 'https:'
-  }, '*');
+  }, trustedOrigin);
 });
 
 // Inject CSS to highlight insecure elements

@@ -43,7 +43,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSecurityAlert: (callback) => {
     ipcRenderer.on('security-alert', (event, message) => callback(message));
   },
-  onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', callback)
+  onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', callback),
+  onHttpBlocked: (callback) => {
+    ipcRenderer.on('http-blocked', (event, data) => callback(data));
+  },
+  allowHttpUrl: (url) => ipcRenderer.send('allow-http-url', url)
 });
 
 // Expose download manager APIs

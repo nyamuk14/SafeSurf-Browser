@@ -140,27 +140,29 @@ function createWindow() {
   app.commandLine.appendSwitch('disable-site-isolation-trials');
 
   // Set CSP for the main window
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    if (details.url.startsWith('file://')) {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [
-            "default-src 'self';" +
-            "script-src 'self' 'unsafe-inline';" +
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
-            "font-src 'self' https://fonts.gstatic.com;" +
-            "img-src 'self' data: https:;" +
-            "connect-src 'self' https:;" +
-            "media-src 'self' blob:;" +
-            "object-src 'none'"
-          ]
-        }
-      });
-    } else {
-      callback({ responseHeaders: details.responseHeaders });
-    }
-  });
+  if (mainWindow && mainWindow.webContents && mainWindow.webContents.session) {
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      if (details.url.startsWith('file://')) {
+        callback({
+          responseHeaders: {
+            ...details.responseHeaders,
+            'Content-Security-Policy': [
+              "default-src 'self';" +
+              "script-src 'self' 'unsafe-inline';" +
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
+              "font-src 'self' https://fonts.gstatic.com;" +
+              "img-src 'self' data: https:;" +
+              "connect-src 'self' https:;" +
+              "media-src 'self' blob:;" +
+              "object-src 'none'"
+            ]
+          }
+        });
+      } else {
+        callback({ responseHeaders: details.responseHeaders });
+      }
+    });
+  }
 
   // Set CSP for webviews
   app.on('web-contents-created', (event, contents) => {
@@ -318,11 +320,16 @@ function createWindow() {
   downloadManager.initialize(mainWindow);
 
   // Add page to history when loaded
-  mainWindow.webContents.on('page-title-updated', (event, title) => {
-    const url = mainWindow.webContents.getURL();
-    const favicon = `${url}/favicon.ico`; // Basic favicon URL (you might want to improve this)
-    addPageToHistory(url, title, favicon);
-  });
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.on('page-title-updated', (event, title) => {
+      let url;
+      if (mainWindow && mainWindow.webContents) {
+        url = mainWindow.webContents.getURL();
+      }
+      const favicon = `${url}/favicon.ico`; // Basic favicon URL (you might want to improve this)
+      addPageToHistory(url, title, favicon);
+    });
+  }
 
   // Handle window close
   mainWindow.on('closed', function () {
@@ -332,35 +339,35 @@ function createWindow() {
 
 // HTTPS Enforcement (Simplified)
 function setupHttpsEnforcement() {
-  // Check HSTS rules and redirect HTTP to HTTPS - SIMPLIFIED to just redirect
+  const allowedHttpUrls = new Set(); // Track user-allowed HTTP URLs for this session
   session.defaultSession.webRequest.onBeforeRequest({ urls: ["http://*/*"] }, (details, callback) => {
     try {
-      const url = new URL(details.url);
-      const domain = url.hostname;
-      
+      const url = details.url;
+      const domain = new URL(url).hostname;
       // Skip local resources and special protocols
-      if (domain === 'localhost' || 
-          domain === '127.0.0.1' ||
-          details.url.startsWith('file://') || 
-          details.url.startsWith('safe://') ||
-          details.url.startsWith('devtools://')) { // Added devtools check from previous edits
+      if (
+        domain === 'localhost' ||
+        domain === '127.0.0.1' ||
+        url.startsWith('file://') ||
+        url.startsWith('safe://') ||
+        url.startsWith('devtools://')
+      ) {
         callback({});
         return;
       }
-      
-      const httpsUrl = details.url.replace('http://', 'https://');
-      
-      console.log(`HTTPS enforcement: redirecting ${domain} to HTTPS`);
-        mainWindow?.webContents.send('security-alert', {
-          message: `Redirecting to secure HTTPS connection...`,
-          type: 'warning'
-        });
-      
-      // Redirect to HTTPS
-      callback({ redirectURL: httpsUrl });
+      // If user has allowed this URL, let it through
+      if (allowedHttpUrls.has(url)) {
+        callback({});
+        return;
+      }
+      // Otherwise, block and show warning with option to continue
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('http-blocked', { url });
+      }
+      callback({ cancel: true });
     } catch (error) {
-      console.error('Error in HTTPS enforcement:', error);
-      callback({}); // Continue with the request as-is in case of error
+      console.error('Error in HTTP enforcement:', error);
+      callback({});
     }
   });
 
@@ -405,19 +412,20 @@ function setupCaching() {
           console.log('[Cache] setTimeout executing for:', details.url);
           try {
             // Get the title from the webview
-            const title = mainWindow.webContents.getTitle();
+            let title;
+            if (mainWindow && mainWindow.webContents) {
+              title = mainWindow.webContents.getTitle();
+            }
             console.log('[Cache] Got title:', title);
             
             // Try to get favicon 
             let favicon = '';
-            try {
+            if (mainWindow && mainWindow.webContents) {
               favicon = await mainWindow.webContents.executeJavaScript(`
                 document.querySelector('link[rel="icon"]')?.href || 
                 document.querySelector('link[rel="shortcut icon"]')?.href ||
                 (window.location.origin + '/favicon.ico')
               `);
-            } catch (err) {
-              console.warn('Error getting favicon:', err);
             }
             
             // Add to history and get the history ID
@@ -430,9 +438,12 @@ function setupCaching() {
             console.log('[Cache] Got history ID:', historyId);
 
             // Get page content
-            const pageContent = await mainWindow.webContents.executeJavaScript(`
-              document.documentElement.outerHTML
-            `);
+            let pageContent;
+            if (mainWindow && mainWindow.webContents) {
+              pageContent = await mainWindow.webContents.executeJavaScript(`
+                document.documentElement.outerHTML
+              `);
+            }
             console.log('[Cache] Got page content, length:', pageContent?.length);
             
             // Cache the page content
@@ -786,6 +797,9 @@ app.whenReady().then(async () => {
   });
 
   console.log('Initialization complete');
+}).catch((error) => {
+  console.error('Error during app initialization:', error);
+  app.quit(); // Optionally quit the app if initialization fails
 });
 
 // Quit when all windows are closed, except on macOS
@@ -796,4 +810,11 @@ app.on('window-all-closed', function () {
 // Cleanup on app quit
 app.on('will-quit', async () => {
   // await historyManager.close(); // historyManager does not have a close() method
+});
+
+ipcMain.on('allow-http-url', (event, url) => {
+  allowedHttpUrls.add(url);
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.loadURL(url);
+  }
 }); 
