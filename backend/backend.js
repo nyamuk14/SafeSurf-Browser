@@ -3,7 +3,7 @@ const axios = require('axios');
 require('dotenv').config();
 const helmet = require('helmet');
 
-const DownloadSecurity = require('../security/download-security');
+const DownloadSecurity = require('./security/download-security');
 const urlhausChecker = new DownloadSecurity();
 
 const app = express();
