@@ -14,7 +14,7 @@ const PHISHING_KEYWORDS = [
 
 class PhishingDetection {
   constructor() {
-    this.backend_url = 'http://localhost:3001/check-url';
+    this.backend_url = 'https://safesurf-browser-production.up.railway.app/check-url';
   }
   
   // Set API keys (no longer needed, but kept for compatibility)

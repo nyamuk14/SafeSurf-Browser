@@ -154,20 +154,6 @@ class DownloadSecurity {
 
       console.log(`[Security URL Check] Analyzing URL: ${url}`);
 
-      // Quick check for trusted domains to skip further checks
-      const trustedDomains = [
-        'mozilla.org', 'mozilla.net', 'github.com', 'github.io', 'githubusercontent.com',
-        'w3.org', 'google.com', 'gstatic.com', 'googleapis.com', 'microsoft.com', 
-        'windows.net', 'wikipedia.org', 'wikimedia.org', 'adobe.com', 'office.com',
-        'apple.com', 'icloud.com', 'dropbox.com', 'box.com', 'drive.google.com'
-      ];
-
-      for (const domain of trustedDomains) {
-        if (hostname.endsWith(domain)) {
-          console.log(`[Security URL Check] Trusted domain detected: ${domain}`);
-          return { isSafe: true, message: 'Download from trusted domain' };
-        }
-      }
 
       // Check if URL is in cache
       const normalizedUrl = this._normalizeUrl(url);

@@ -68,10 +68,10 @@ if (process.env.NODE_ENV === 'production') {
 const config = require('./config');
 
 // Import security modules
-const phishingDetection = require('./security/phishing-detection');
+const phishingDetection = require('./backend/security/phishing-detection');
 let downloadSecurity;
 try {
-  downloadSecurity = require('./security/download-security');
+  downloadSecurity = require('./backend/security/download-security');
   console.log('Download security module loaded successfully');
 } catch (error) {
   console.error('Error loading download security module:', error.message);
@@ -82,7 +82,7 @@ try {
     updateUrlHausDatabase: () => Promise.resolve(false)
   };
 }
-const downloadManager = require('./security/download-manager');
+const downloadManager = require('./backend/security/download-manager');
 
 // Import data management modules
 const historyManager = require('./data/history-manager'); // Use the new simple manager
@@ -533,7 +533,7 @@ app.whenReady().then(async () => {
   console.log('Electron app is ready, initializing...');
   
   // Determine backend path and executable
-  let backendPath = path.join(__dirname, 'backend.js');
+  let backendPath = path.join(__dirname, 'backend','backend.js');
   let exec = process.execPath;
   if (!isPackaged) {
     exec = 'node';

@@ -182,7 +182,7 @@ class DownloadManager {
       console.log(`[Security] Checking URL against threat databases (backend): ${url}`);
       let urlCheckResult;
       try {
-        const response = await axios.post('http://localhost:3001/check-urlhaus', { url });
+        const response = await axios.post('https://safesurf-browser-production.up.railway.app/check-urlhaus', { url });
         urlCheckResult = response.data;
       } catch (err) {
         urlCheckResult = { isSafe: false, message: 'Backend error: ' + err.message };
