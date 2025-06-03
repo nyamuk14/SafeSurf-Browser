@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const downloadSecurity = require('./download-security');
 const Store = require('electron-store');
+const axios = require('axios');
 
 // Initialize store for saving download preferences
 const store = new Store();
@@ -177,9 +178,15 @@ class DownloadManager {
         progress: 0
       };
       
-      // Check the URL against threat databases
-      console.log(`[Security] Checking URL against threat databases: ${url}`);
-      const urlCheckResult = await downloadSecurity.checkDownloadUrl(url);
+      // Check the URL against threat databases (use backend)
+      console.log(`[Security] Checking URL against threat databases (backend): ${url}`);
+      let urlCheckResult;
+      try {
+        const response = await axios.post('http://localhost:3001/check-urlhaus', { url });
+        urlCheckResult = response.data;
+      } catch (err) {
+        urlCheckResult = { isSafe: false, message: 'Backend error: ' + err.message };
+      }
       scanProgress.progress = 75;
       
       if (!urlCheckResult.isSafe) {

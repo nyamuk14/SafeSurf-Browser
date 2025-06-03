@@ -5,6 +5,8 @@ const url = require('url');
 const fs = require('fs');
 const Store = require('electron-store');
 require('dotenv').config();
+const { spawn } = require('child_process');
+const isPackaged = app.isPackaged;
 
 // In production mode, we'll log to a file instead of disabling logs completely
 if (process.env.NODE_ENV === 'production') {
@@ -91,6 +93,7 @@ const store = new Store();
 
 // Global variables
 let mainWindow; // Keep a global reference of the window object to prevent garbage collection
+let backendProcess;
 
 // Default settings
 const defaultSettings = {
@@ -529,6 +532,38 @@ function setupWebviewSecurity() {
 app.whenReady().then(async () => {
   console.log('Electron app is ready, initializing...');
   
+  // Determine backend path and executable
+  let backendPath = path.join(__dirname, 'backend.js');
+  let exec = process.execPath;
+  if (!isPackaged) {
+    exec = 'node';
+  } else {
+    // In packaged mode, backend.js should be outside of app.asar
+    // If inside asar, extract or copy it to a temp location
+    const fs = require('fs');
+    const os = require('os');
+    const tempDir = os.tmpdir();
+    const destPath = path.join(tempDir, 'backend.js');
+    if (backendPath.includes('app.asar')) {
+      try {
+        fs.copyFileSync(backendPath, destPath);
+        backendPath = destPath;
+        console.log('Copied backend.js to temp directory for packaged mode:', backendPath);
+      } catch (err) {
+        console.error('Failed to copy backend.js to temp directory:', err);
+      }
+    }
+  }
+  console.log('Starting backend process:', exec, backendPath);
+  backendProcess = spawn(exec, [backendPath], {
+    cwd: __dirname,
+    stdio: 'inherit',
+    shell: false
+  });
+  backendProcess.on('error', (err) => {
+    console.error('Failed to start backend process:', err);
+  });
+  
   // API keys are loaded by the Config constructor when config.js is imported.
   // Use the getter to access them.
   const apiKeys = config.getApiKeys(); 
@@ -809,7 +844,8 @@ app.on('window-all-closed', function () {
 
 // Cleanup on app quit
 app.on('will-quit', async () => {
-  // await historyManager.close(); // historyManager does not have a close() method
+  if (backendProcess) backendProcess.kill();
+  // ... any other cleanup
 });
 
 ipcMain.on('allow-http-url', (event, url) => {
