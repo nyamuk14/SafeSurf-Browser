@@ -27,15 +27,6 @@
     npm install
     ```
 
-3. Set up API keys:
-
-   Create `.env` file and add your API keys:
-
-   ```bash
-   GOOGLE_SAFE_BROWSING_API_KEY=your-gsb-key
-   VIRUS_TOTAL_API_KEY=your-vt-key
-   ```
-
 4. Run the app:
 
    ```bash
