@@ -8,7 +8,7 @@
 
 ## Features
 
-- Real-time phishing detection using Google Safe Browsing & VirusTotal APIs  
+- Phishing detection using Google Safe Browsing & VirusTotal APIs  
 - Safe download management with malware scanning via URLHaus  
 - Automatic redirection from HTTP to HTTPS
 
