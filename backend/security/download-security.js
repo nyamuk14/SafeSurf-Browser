@@ -183,7 +183,8 @@ class DownloadSecurity {
           const details = urlCheckResult.details;
           console.log(`[Security URL Check] 🚨 URL matched in URLhaus malware database!`);
           console.log(`[Security URL Check] Threat type: ${details.threat}`);
-          console.log(`[Security URL Check] Tags: ${details.tags.join(', ')}`);
+          const tags = Array.isArray(details.tags) ? details.tags.join(', ') : (details.tags || 'none');
+          console.log(`[Security URL Check] Tags: ${tags}`);
           console.log(`[Security URL Check] URLhaus link: ${details.urlhausLink}`);
 
           const result = {
