@@ -107,14 +107,13 @@ class DownloadSecurity {
   // Helper function to normalize URLs for better matching
   _normalizeUrl(url) {
     try {
-      // Basic URL normalization
       const urlObj = new URL(url);
-      // Return hostname + pathname without protocol, query params, etc.
-      // This helps match URLs regardless of http/https and query parameters
-      return urlObj.hostname + urlObj.pathname;
+      let hostname = urlObj.hostname.toLowerCase();
+      let pathname = urlObj.pathname.replace(/\/+$/, ''); // Remove trailing slashes
+      pathname = decodeURIComponent(pathname); // Decode URL-encoded characters
+      return hostname + pathname;
     } catch (e) {
-      // If URL parsing fails, return the original URL
-      return url;
+      return url.toLowerCase();
     }
   }
 
